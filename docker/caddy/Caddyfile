@@ -1,5 +1,5 @@
 :80 {
-    root * /srv/public
+    root * /app/public
     
     php_fastcgi api:9000
     

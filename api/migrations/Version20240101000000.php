@@ -17,7 +17,7 @@ final class Version20240101000000 extends AbstractMigration
     public function up(Schema $schema): void
     {
         $this->addSql('CREATE TABLE formations (
-            id CHAR(36) NOT NULL,
+            id BINARY(16) NOT NULL,
             titre VARCHAR(255) NOT NULL,
             organisme VARCHAR(255) NOT NULL,
             departement VARCHAR(3) NOT NULL,

@@ -1,224 +1,103 @@
-# Emfor POC - Formation Search Portal
+# Formation Search Portal
 
-Monorepo avec API Symfony 7 et Frontend React 18 pour recherche de formations avec carte interactive Leaflet.
+A proof of concept for searching training courses on a map: a Symfony REST API and a React + Leaflet frontend.
 
-> **🎯 Démarrage en une seule commande : `./start.sh`**
+![Search results with the list on the left and the Leaflet map on the right](docs/screenshot.png)
 
-![Capture d'écran de l'application Emfor POC](capture1.png)
-*Interface de recherche de formations avec carte interactive Leaflet*
+The user interface and the demo data are in French (the project targets the Bourgogne-Franche-Comté region).
 
-## 🚀 Démarrage rapide
+## Features
 
-### Prérequis
-- PHP 8.3+ avec extensions SQLite, PDO
-- Node.js 20+
-- Git
-- Composer (installé automatiquement si absent)
+These were checked against a running instance (see [Verification](#verification)):
 
-### Installation et lancement automatique
+- Full-text search on title, training provider and city, debounced by 400 ms
+- Filters by département and by delivery mode (in person, remote, hybrid), combinable with the search
+- Paginated results (10 per page)
+- Leaflet map with one marker per result on the current page; the map zooms to fit them
+- A popup with course details when you click a marker
+- OpenAPI documentation served at `/api/docs`
+
+## Architecture
+
+```
+api/        Symfony 7.1 REST API (PHP 8.3, Doctrine ORM, NelmioApiDoc, NelmioCors)
+frontend/   React 18 + TypeScript + Vite 5, TanStack Query, Tailwind CSS, React Leaflet
+docker/     Caddy configuration (PHP-FPM front for the API, static server for the build)
+```
+
+API endpoints:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check |
+| GET | `/formations?q=&departement=&modalite=&page=&limit=` | Paginated, filtered list |
+| GET | `/formations/{id}` | One course by UUID (404 if unknown) |
+
+Two ways to run it, with different databases:
+
+- **Local scripts** (`start.sh`): PHP built-in server and SQLite file in `api/var/data.db`.
+- **Docker Compose**: MySQL 8, PHP-FPM behind Caddy, Vite dev server.
+
+## Try it
+
+### With Docker
+
+Requirements: Docker with Compose v2.
 
 ```bash
-# Clone le repo
-git clone https://github.com/FredBourouliou/formation-search-portal-.git
-cd formation-search-portal-/emfor-poc
-
-# 🎯 Démarrage en une commande
-./start.sh
-
-# L'application est maintenant accessible sur :
-# - Frontend : http://localhost:5173
-# - API : http://localhost:8080
+git clone https://github.com/FredBourouliou/formation-search-portal.git
+cd formation-search-portal
+docker compose up -d --build
 ```
 
-### Scripts de gestion
+On first start the API container runs the migrations and loads the demo data. Then open:
+
+- Frontend: http://localhost:5173
+- API: http://localhost:8080 (docs at http://localhost:8080/api/docs)
+
+Stop with `docker compose down` (add `-v` to delete the database volume).
+
+### Without Docker
+
+Requirements: PHP 8.3+ with `pdo_sqlite`, Node.js 20+, and [Composer](https://getcomposer.org/download/).
+If `composer` is not on your `PATH`, `start.sh` downloads `composer.phar` into the repository root (it is git-ignored).
 
 ```bash
-./start.sh    # 🚀 Démarre tous les services
-./stop.sh     # 🛑 Arrête tous les services
-./status.sh   # 📊 Vérifie l'état des services
+git clone https://github.com/FredBourouliou/formation-search-portal.git
+cd formation-search-portal
+./start.sh    # installs dependencies, creates the SQLite database, starts both servers
+./status.sh   # shows what is running
+./stop.sh     # stops everything
 ```
 
-## 📍 URLs d'accès
+The script messages are in French.
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| **Frontend** | http://localhost:5173 | Interface React avec carte Leaflet |
-| **API REST** | http://localhost:8080 | API Symfony 7 |
-| **Health Check** | http://localhost:8080/health | Status de l'API |
-| **Swagger UI** | http://localhost:8080/api/docs | Documentation API |
+## Configuration
 
-## 🏗️ Architecture
+`api/.env` holds non-secret development defaults, following the Symfony convention. Put local overrides in `api/.env.local` (git-ignored) or in real environment variables. `docker-compose.yml` overrides `DATABASE_URL` to use its MySQL service; the credentials in that file are placeholders for local use only.
 
-```
-emfor-poc/
-├── api/                    # Backend Symfony 7 (PHP 8.3+)
-│   ├── src/               # Code source
-│   ├── config/            # Configuration Symfony
-│   ├── migrations/        # Migrations Doctrine
-│   └── tests/             # Tests PHPUnit
-├── frontend/              # Frontend React 18 + Vite
-│   ├── src/              # Code source React
-│   └── dist/             # Build production
-├── docker-compose.yml    # Orchestration Docker (optionnel)
-└── Makefile             # Commandes utilitaires
-```
+The frontend reads `VITE_API_BASE_URL` (default `http://localhost:8080`).
 
-## ✨ Fonctionnalités
+## Tests
 
-- 🔍 **Recherche multicritères** : mot-clé, département, modalité
-- 🗺️ **Carte interactive Leaflet** : visualisation géographique des formations
-- 📄 **Pagination** : navigation fluide entre les pages
-- 🔄 **Synchronisation liste ↔️ carte** : interaction bidirectionnelle
-- ⚡ **Debounce** : optimisation des requêtes (400ms)
-- 📱 **Responsive** : adapté mobile et desktop
-- ♿ **Accessible** : ARIA labels et navigation clavier
-
-## 💾 Base de données
-
-**Mode Local** : SQLite (fichier `api/var/data.db`)
-**Mode Docker** : MySQL 8
-
-## 📡 API Endpoints
-
-### Health Check
-```bash
-GET http://localhost:8080/health
-```
-
-### Formations
-```bash
-# Liste paginée avec filtres
-GET http://localhost:8080/formations?page=1&limit=10&q=java&departement=21&modalite=hybride
-
-# Détail d'une formation
-GET http://localhost:8080/formations/{id}
-```
-
-### Paramètres de recherche
-
-| Paramètre | Type | Description | Exemple |
-|-----------|------|-------------|---------|
-| page | int | Page courante (défaut: 1) | 2 |
-| limit | int | Éléments par page (défaut: 10) | 20 |
-| q | string | Recherche texte (titre, organisme, ville) | "javascript" |
-| departement | string | Code département | "21" |
-| modalite | string | presentiel, distanciel, hybride | "hybride" |
-
-## 📦 Stack technique
-
-### Backend
-- PHP 8.3+ (compatible 8.4)
-- Symfony 7.1
-- Doctrine ORM
-- SQLite (local) / MySQL 8 (Docker)
-- Nelmio CORS & API Doc Bundle
-- PHPUnit
-
-### Frontend
-- React 18
-- Vite 5
-- TypeScript
-- Tailwind CSS
-- Leaflet (carte interactive)
-- TanStack Query (React Query)
-
-## 🐳 Services Docker (Optionnel)
-
-| Service | Port | Description |
-|---------|------|-------------|
-| db | 3306 | MySQL 8 |
-| api | 9000 | PHP-FPM 8.3 + Symfony |
-| web | 8080 | Caddy (reverse proxy API) |
-| frontend | 5173 | Vite dev server |
-| frontend_web | 8081 | Caddy (static build) |
-
-## 🧪 Tests
+The API has 8 functional PHPUnit tests (health check, pagination, each filter, 404). They need a MySQL database:
 
 ```bash
-# Tests backend
-cd api && php bin/phpunit
-
-# Type check frontend
-cd frontend && npm run build
+make test-api          # with the Docker Compose stack running
 ```
 
-## 📝 Commandes utiles
+The frontend has no automated tests; `npm run build` type-checks it with `tsc`.
 
-### Backend API
-```bash
-cd api
-php bin/console cache:clear            # Vider le cache
-php bin/console doctrine:fixtures:load # Recharger les fixtures (60 formations)
-php bin/phpunit                         # Lancer les tests
-```
+GitHub Actions runs three jobs on every push: API tests against a MySQL service, frontend build, and Docker image builds.
 
-### Frontend
-```bash
-cd frontend
-npm run build    # Build production
-npm run preview  # Preview du build
-```
+## Verification
 
-### Mode Docker
-```bash
-make bootstrap   # Installation complète
-make up         # Démarrer tous les services
-make down       # Arrêter les services
-make api-logs   # Voir les logs API
-make ps         # État des conteneurs
-```
+Last checked locally with the Docker Compose stack and a headless Chromium (Playwright): 59 results on load, search `Dijon` returns 4, filter `hybride` returns 20, département `25` returns 8 with 8 markers, the marker popup opens, page 2 loads, and the browser console shows no errors.
 
-## 🔧 Configuration
+## Demo data
 
-### Backend (.env)
+The 59 courses loaded by the fixtures (`api/src/DataFixtures/FormationFixtures.php`) are fictional. Provider names are invented, coordinates are city centres in the eight départements of Bourgogne-Franche-Comté, dates are generated relative to the load date, and "more information" links point to `example.com`.
 
-**Mode Local (SQLite)**
-```env
-DATABASE_URL="sqlite:///%kernel.project_dir%/var/data.db"
-APP_ENV=dev
-CORS_ALLOW_ORIGIN='^https?://localhost:(5173|8081)$'
-```
+## License
 
-**Mode Docker (MySQL)**
-```env
-DATABASE_URL="mysql://root:rootpass@db:3306/emfor"
-APP_ENV=dev
-CORS_ALLOW_ORIGIN='^https?://localhost:(5173|8081)$'
-```
-
-### Frontend (.env)
-```env
-VITE_API_BASE_URL=http://localhost:8080
-```
-
-## 📊 Données de test
-
-Le projet contient **60 formations réalistes** réparties sur les départements de Bourgogne-Franche-Comté :
-- Côte-d'Or (21)
-- Doubs (25)
-- Jura (39)
-- Nièvre (58)
-- Haute-Saône (70)
-- Saône-et-Loire (71)
-- Yonne (89)
-- Territoire de Belfort (90)
-
-## 🔧 Résolution des problèmes
-
-| Problème | Solution |
-|----------|----------|
-| Port 8080 ou 5173 déjà utilisé | Exécutez `./stop.sh` ou `lsof -ti:8080 \| xargs kill` |
-| Base de données corrompue | `rm api/var/data.db` puis `./start.sh` |
-| Dépendances obsolètes | `cd api && composer update` et `cd frontend && npm update` |
-| Erreur de cache Symfony | `cd api && php bin/console cache:clear` |
-
-## 🚢 Déploiement
-
-Le projet inclut une CI/CD GitHub Actions qui :
-- Teste le backend (PHPUnit)
-- Build et vérifie le frontend (TypeScript)
-- Vérifie le code (linting optionnel)
-
-## 📄 Licence
-
-MIT
+[MIT](LICENSE)

@@ -1,13 +1,12 @@
-version: '3.8'
-
 services:
   db:
     image: mysql:8
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
+      # Example credentials for local development only.
+      MYSQL_ROOT_PASSWORD: root_password_change_me
       MYSQL_DATABASE: emfor
-      MYSQL_USER: emfor
-      MYSQL_PASSWORD: emforpass
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app_password_change_me
     ports:
       - "3306:3306"
     volumes:
@@ -25,12 +24,13 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: mysql://root:rootpass@db:3306/emfor
+      DATABASE_URL: mysql://app:app_password_change_me@db:3306/emfor?serverVersion=8.0.32&charset=utf8mb4
       APP_ENV: dev
       APP_DEBUG: 1
       CORS_ALLOW_ORIGIN: '^https?://localhost:(5173|8081)$'
     volumes:
       - ./api:/app
+      - /app/vendor
       - composer_cache:/root/.composer
     networks:
       - emfor_network
@@ -40,7 +40,7 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./api/public:/srv/public
+      - ./api/public:/app/public
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile
     depends_on:
       - api
