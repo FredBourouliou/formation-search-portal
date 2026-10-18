@@ -1,6 +1,6 @@
 # Frontend
 
-React 18 + TypeScript + Vite 5 client for the formation search API. Uses TanStack Query, Tailwind CSS and React Leaflet.
+React 18 + TypeScript + Vite 8 client for the formation search API. Uses TanStack Query, Tailwind CSS 4 and React Leaflet.
 
 ```bash
 npm ci

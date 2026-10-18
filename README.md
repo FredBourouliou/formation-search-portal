@@ -21,7 +21,7 @@ These were checked against a running instance (see [Verification](#verification)
 
 ```
 api/        Symfony 7.1 REST API (PHP 8.3, Doctrine ORM, NelmioApiDoc, NelmioCors)
-frontend/   React 18 + TypeScript + Vite 5, TanStack Query, Tailwind CSS, React Leaflet
+frontend/   React 18 + TypeScript + Vite 8, TanStack Query, Tailwind CSS 4, React Leaflet
 docker/     Caddy configuration (PHP-FPM front for the API, static server for the build)
 ```
 
@@ -59,7 +59,7 @@ Stop with `docker compose down` (add `-v` to delete the database volume).
 
 ### Without Docker
 
-Requirements: PHP 8.3+ with `pdo_sqlite`, Node.js 20+, and [Composer](https://getcomposer.org/download/).
+Requirements: PHP 8.3+ with `pdo_sqlite`, Node.js 20.19+ or 22.12+, and [Composer](https://getcomposer.org/download/).
 If `composer` is not on your `PATH`, `start.sh` downloads `composer.phar` into the repository root (it is git-ignored).
 
 ```bash
